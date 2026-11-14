@@ -1,6 +1,5 @@
 """Example tests (happy path only). They import only selection_core: the lesson 4 test rule."""
 import pytest
-
 import selection_core
 
 
@@ -21,6 +20,7 @@ def test_valid_selection_is_recorded_on_the_event(sample_event):
 def test_available_services_lists_enabled_services_only(sample_event):
     assert selection_core.available_services(sample_event) == ["add_to_album"]
 
+
 @pytest.mark.req("REQ-SEL-02")
 def test_media_from_another_event_is_rejected(sample_event):
     with pytest.raises(selection_core.SelectionError) as err:
@@ -28,9 +28,30 @@ def test_media_from_another_event_is_rejected(sample_event):
             sample_event, "cli_100", ["med_9"], ["add_to_album"])
     assert err.value.code == "MEDIA_NOT_IN_EVENT"
 
+
 @pytest.mark.req("REQ-SEL-05")
 def test_duplicate_media_is_rejected(sample_event):
     with pytest.raises(selection_core.SelectionError) as err:
         selection_core.submit_selection(
             sample_event, "cli_100", ["med_1", "med_1"], ["add_to_album"])
     assert err.value.code == "DUPLICATE_MEDIA"
+
+
+@pytest.mark.req("REQ-SEL-04")
+def test_rejected_selection_does_not_change_event(sample_event):
+    import copy
+    event_copy = copy.deepcopy(sample_event)
+    with pytest.raises(selection_core.SelectionError):
+        selection_core.submit_selection(
+            sample_event, "cli_100", [], ["add_to_album"]
+        )
+    assert sample_event == event_copy
+
+
+@pytest.mark.req("REQ-SEL-06")
+def test_wrong_client_is_forbidden(sample_event):
+    with pytest.raises(selection_core.SelectionError) as err:
+        selection_core.submit_selection(
+            sample_event, "wrong_client_id", ["med_1"], ["add_to_album"]
+        )
+    assert err.value.code == "FORBIDDEN"
