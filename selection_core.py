@@ -25,7 +25,11 @@ def _media_ids_of(event: dict) -> set[str]:
     """All media ids in all galleries of the event."""
     ids: set[str] = set()
     for gallery in event.get("galleries", []):
-        ids.update(gallery.get("media", []))
+        for item in gallery.get("media", []):
+            if isinstance(item, dict):
+                ids.add(item.get("id"))
+            else:
+                ids.add(item)
     return ids
 
 
@@ -37,8 +41,18 @@ def submit_selection(event: dict, actor_id: str, media_ids: list, service_codes:
     """
     if actor_id != event.get("client_id"):
         raise SelectionError("FORBIDDEN")
+
     if not isinstance(media_ids, list) or len(media_ids) == 0:
         raise SelectionError("SELECTION_EMPTY")
+
+    if len(media_ids) != len(set(media_ids)):
+        raise SelectionError("DUPLICATE_MEDIA")
+
+    valid_media_ids = _media_ids_of(event)
+    for media_id in media_ids:
+        if media_id not in valid_media_ids:
+            raise SelectionError("MEDIA_NOT_IN_EVENT")
+
     enabled = available_services(event)
     for code in service_codes:
         if code not in enabled:
