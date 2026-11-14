@@ -39,8 +39,14 @@ def test_duplicate_media_is_rejected(sample_event):
 
 @pytest.mark.req("REQ-SEL-04")
 def test_rejected_selection_does_not_change_event(sample_event):
-    import copy
-    event_copy = copy.deepcopy(sample_event)
+    def _clone(obj):
+        if isinstance(obj, dict):
+            return {k: _clone(v) for k, v in obj.items()}
+        if isinstance(obj, list):
+            return [_clone(x) for x in obj]
+        return obj
+
+    event_copy = _clone(sample_event)
     with pytest.raises(selection_core.SelectionError):
         selection_core.submit_selection(
             sample_event, "cli_100", [], ["add_to_album"]
